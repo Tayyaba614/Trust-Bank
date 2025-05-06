@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrustBank | Services</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="services-page">
+  <header>
+    <h1>Banking Services</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="loans.html">Loans</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h2>Create or Manage Account</h2>
+    <input type="text" id="customerName" placeholder="Customer Name" />
+    <input type="text" id="accountNumber" placeholder="Account Number" />
+    <input type="email" id="email" placeholder="Email (optional)" />
+    <input type="number" id="amount" placeholder="Amount (for deposit/withdraw)" />
+
+    <button id="createAccountBtn">Create Account</button>
+    <button id="depositBtn">Deposit</button>
+    <button id="withdrawBtn">Withdraw</button>
+    <button id="checkBalanceBtn">Check Balance</button>
+    <button id="deleteBtn">Delete Account</button>
+    <button id="showAllBtn">Show All Accounts</button>
+    <button id="historyBtn">Show History</button>
+    <button id="clearAllBtn" style="background-color: #dc3545;">Clear All Data</button>
+
+    <div id="summary" style="margin-top: 20px;"></div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 TrustBank. All rights reserved.</p>
+  </footer>
+
+  <script>
+    let accounts = JSON.parse(localStorage.getItem("accounts")) || {};
+    let history = JSON.parse(localStorage.getItem("history")) || {};
+
+    // Add sample accounts if none exist
+    if (Object.keys(accounts).length === 0) {
+      accounts["John Doe"] = { accountNumber: "1001", email: "john@example.com", balance: 200 };
+      history["John Doe"] = ["Account created.", "Deposited 200"];
+      accounts["Mary Smith"] = { accountNumber: "1002", email: "mary@example.com", balance: 500 };
+      history["Mary Smith"] = ["Account created.", "Deposited 500"];
+      saveData();
+    }
+
+    function saveData() {
+      localStorage.setItem("accounts", JSON.stringify(accounts));
+      localStorage.setItem("history", JSON.stringify(history));
+    }
+
+    function updateSummary(html) {
+      document.getElementById("summary").innerHTML = html;
+    }
+
+    function recordHistory(name, action) {
+      if (!history[name]) history[name] = [];
+      history[name].push(action);
+      saveData();
+    }
+
+    function getFieldValues() {
+      return {
+        name: document.getElementById("customerName").value.trim(),
+        accNo: document.getElementById("accountNumber").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        amount: parseFloat(document.getElementById("amount").value)
+      };
+    }
+
+    document.getElementById("createAccountBtn").onclick = () => {
+      const { name, accNo, email } = getFieldValues();
+
+      if (!name || !accNo) {
+        return updateSummary("<span style='color:red'>Please enter name and account number.</span>");
+      }
+
+      if (accounts[name]) {
+        return updateSummary("<span style='color:red'>Account already exists.</span>");
+      }
+
+      accounts[name] = { accountNumber: accNo, email, balance: 0 };
+      history[name] = [];
+      recordHistory(name, "Account created.");
+      updateSummary(`<span style='color:green'>Account for ${name} created successfully.</span>`);
+      saveData();
+    };
+
+    document.getElementById("depositBtn").onclick = () => {
+      const { name, amount } = getFieldValues();
+      if (!accounts[name]) return updateSummary("Account not found.");
+      if (isNaN(amount) || amount <= 0) return updateSummary("Enter a valid deposit amount.");
+      accounts[name].balance += amount;
+      recordHistory(name, `Deposited ${amount}`);
+      updateSummary(`<span style='color:green'>Deposited ₹${amount} to ${name}. New balance: ₹${accounts[name].balance}</span>`);
+      saveData();
+    };
+
+    document.getElementById("withdrawBtn").onclick = () => {
+      const { name, amount } = getFieldValues();
+      if (!accounts[name]) return updateSummary("Account not found.");
+      if (isNaN(amount) || amount <= 0) return updateSummary("Enter a valid withdrawal amount.");
+      if (accounts[name].balance < amount) return updateSummary("Insufficient balance.");
+      accounts[name].balance -= amount;
+      recordHistory(name, `Withdrew ${amount}`);
+      updateSummary(`<span style='color:orange'>Withdrew ₹${amount} from ${name}. New balance: ₹${accounts[name].balance}</span>`);
+      saveData();
+    };
+
+    document.getElementById("checkBalanceBtn").onclick = () => {
+      const { name } = getFieldValues();
+      if (!accounts[name]) return updateSummary("Account not found.");
+      updateSummary(`${name}'s current balance: ₹${accounts[name].balance}`);
+    };
+
+    document.getElementById("deleteBtn").onclick = () => {
+      const { name } = getFieldValues();
+      if (!accounts[name]) return updateSummary("Account not found.");
+      delete accounts[name];
+      delete history[name];
+      saveData();
+      updateSummary(`<span style='color:red'>Account for ${name} deleted.</span>`);
+    };
+
+    document.getElementById("showAllBtn").onclick = () => {
+      if (Object.keys(accounts).length === 0) return updateSummary("No accounts available.");
+      let html = "<h3>All Accounts</h3><table border='1' cellpadding='8'><tr><th>Name</th><th>Account No</th><th>Email</th><th>Balance</th></tr>";
+      for (let name in accounts) {
+        const acc = accounts[name];
+        html += `<tr><td>${name}</td><td>${acc.accountNumber}</td><td>${acc.email || "-"}</td><td>₹${acc.balance}</td></tr>`;
+      }
+      html += "</table>";
+      updateSummary(html);
+    };
+
+    document.getElementById("historyBtn").onclick = () => {
+      const { name } = getFieldValues();
+      if (!history[name]) return updateSummary("No history for this account.");
+      let log = `<h3>Transaction History for ${name}</h3><ul>`;
+      for (let item of history[name]) {
+        log += `<li>${item}</li>`;
+      }
+      log += "</ul>";
+      updateSummary(log);
+    };
+
+    document.getElementById("clearAllBtn").onclick = () => {
+      if (confirm("Are you sure you want to delete ALL accounts and data?")) {
+        accounts = {};
+        history = {};
+        localStorage.clear();
+        updateSummary("All account data cleared.");
+      }
+    };
+  </script>
+</body>
+</html>
